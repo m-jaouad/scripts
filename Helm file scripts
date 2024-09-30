@@ -1,0 +1,43 @@
+import yaml
+import tempfile
+import subprocess
+import os
+
+def modify_helmfile(template_path, replacements):
+    with open(template_path, 'r') as file:
+        content = file.read()
+
+    for placeholder, value in replacements.items():
+        content = content.replace(f"{{{{ {placeholder} }}}}", value)
+
+    return yaml.safe_load(content)
+
+def execute_helmfile_sync(modified_helmfile):
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as temp_file:
+        yaml.dump(modified_helmfile, temp_file)
+        temp_file_path = temp_file.name
+
+    try:
+        result = subprocess.run(['helmfile', '-f', temp_file_path, 'sync'], 
+                                capture_output=True, text=True, check=True)
+        print("Helmfile sync output:")
+        print(result.stdout)
+    except subprocess.CalledProcessError as e:
+        print("Error executing helmfile sync:")
+        print(e.stderr)
+    finally:
+        os.unlink(temp_file_path)
+
+def main():
+    template_path = 'path/to/your/helmfile_template.yaml'
+    replacements = {
+        'PLACEHOLDER1': 'value1',
+        'PLACEHOLDER2': 'value2',
+        # Add more placeholders and their values as needed
+    }
+
+    modified_helmfile = modify_helmfile(template_path, replacements)
+    execute_helmfile_sync(modified_helmfile)
+
+if __name__ == "__main__":
+    main()
